@@ -3,23 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Steamer Comparison</title>
+<title>Steamer Comparison Scales</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --cirrus: #5DCAA5;
-    --breville: #378ADD;
-    --tefal: #D4537E;
-    --banxye: #EF9F27;
-    --bg: #0E0E0F;
-    --surface: #161618;
-    --surface2: #1E1E21;
-    --border: #2A2A2E;
-    --text: #F0EFE8;
-    --muted: #6B6B72;
-    --accent: #F0EFE8;
+    --bg: #111210;
+    --surface: #1A1B19;
+    --surface2: #222320;
+    --border: #2E2F2C;
+    --text: #EDECEA;
+    --muted: #6B6C68;
+    --gold: #E8B84B;
+    --gold-dim: #7A5F1A;
   }
 
   body {
@@ -27,444 +25,761 @@
     color: var(--text);
     font-family: 'DM Mono', monospace;
     min-height: 100vh;
-    padding: 48px 24px;
-    overflow-x: hidden;
+    padding: 40px 32px 60px;
   }
 
-  /* Grain overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 100;
-    opacity: 0.4;
+  /* Upload zone */
+  .upload-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 48px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
   }
 
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--gold);
+    background: rgba(232, 184, 75, 0.04);
+  }
+
+  .upload-left { display: flex; align-items: center; gap: 14px; }
+
+  .upload-icon {
+    width: 36px; height: 36px;
+    background: var(--surface2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .upload-text { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+  .upload-text strong { color: var(--text); display: block; margin-bottom: 2px; font-size: 13px; }
+
+  .upload-btn {
+    background: var(--gold);
+    color: #111;
+    border: none;
+    border-radius: 7px;
+    padding: 8px 18px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: opacity 0.2s;
+  }
+  .upload-btn:hover { opacity: 0.85; }
+
+  #file-input { display: none; }
+
+  /* Header */
   .page-header {
     text-align: center;
-    margin-bottom: 56px;
-    animation: fadeUp 0.6s ease both;
+    margin-bottom: 52px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .eyebrow {
-    font-family: 'DM Mono', monospace;
     font-size: 10px;
-    letter-spacing: 0.25em;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+
+  h1 em {
+    font-style: normal;
+    color: var(--gold);
+  }
+
+  .steamer-count {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Scale sections */
+  .scales-wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+  }
+
+  .scale-section { animation: fadeUp 0.5s ease both; }
+  .scale-section:nth-child(1) { animation-delay: 0.05s; }
+  .scale-section:nth-child(2) { animation-delay: 0.15s; }
+  .scale-section:nth-child(3) { animation-delay: 0.25s; }
+
+  .scale-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: var(--text);
+  }
+
+  .scale-unit {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* The scale itself */
+  .scale-container {
+    position: relative;
+    padding-bottom: 0;
+    margin: 0 24px;
+  }
+
+  .scale-track {
+    position: relative;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+  }
+
+  /* Arrow at end */
+  .scale-track::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-left: 8px solid var(--border);
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+
+  /* Tick marks - hang below the track */
+  .tick-mark {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .tick-line {
+    width: 1px;
+    height: 8px;
+    background: var(--border);
+  }
+
+  .tick-val {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    margin-top: 4px;
+    white-space: nowrap;
+  }
+
+  /* Labels area below track */
+  .labels-area {
+    position: relative;
+    margin-top: 36px; /* room for ticks + tick values */
+  }
+
+  /* Steamer markers - positioned in labels-area */
+  .steamer-marker {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: default;
+  }
+
+  .marker-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: 2px solid var(--bg);
+    flex-shrink: 0;
+    box-shadow: 0 0 8px rgba(232,184,75,0.4);
+    position: absolute;
+    top: -47px; /* sits on the track line */
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .marker-line {
+    width: 1.5px;
+    background: var(--gold);
+    opacity: 0.4;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .marker-label {
+    font-size: 10px;
+    color: var(--text);
+    letter-spacing: 0.03em;
+    text-align: center;
+    line-height: 1.35;
+    max-width: 72px;
+    word-break: break-word;
+    hyphens: auto;
+    position: relative;
+  }
+
+  .marker-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--gold);
+    margin-top: 3px;
+    white-space: nowrap;
+    position: relative;
+  }
+
+  /* Toggle switch */
+  .scale-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .scale-header-left { display: flex; align-items: baseline; gap: 12px; }
+
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .toggle-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    white-space: nowrap;
+  }
+
+  .toggle-label.active { color: var(--text); }
+
+  .toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    border-radius: 99px;
+    background: var(--gold);
+    cursor: pointer;
+    transition: background 0.25s;
+  }
+
+  .toggle-track::before {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    left: 3px;
+    top: 3px;
+    border-radius: 50%;
+    background: var(--bg);
+    transition: transform 0.25s;
+  }
+
+  .toggle input:checked + .toggle-track {
+    background: #4A9EE8;
+  }
+
+  .toggle input:checked + .toggle-track::before {
+    transform: translateX(16px);
+  }
+
+  /* Blue mode for advertised */
+  .scale-section.advertised .marker-dot { background: #4A9EE8; box-shadow: 0 0 8px rgba(74,158,232,0.4); }
+  .scale-section.advertised .marker-line { background: #4A9EE8; }
+  .scale-section.advertised .marker-value { color: #4A9EE8; }
+
+  /* Steamer filter list */
+  .steamer-filter {
+    max-width: 960px;
+    margin: 0 auto 40px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+
+  .filter-heading {
+    font-size: 10px;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
     margin-bottom: 12px;
   }
 
-  h1 {
-    font-family: 'Syne', sans-serif;
-    font-size: clamp(32px, 5vw, 52px);
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    line-height: 1;
+  .filter-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filter-pill {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.03em;
+    user-select: none;
+  }
+
+  .filter-pill.active {
+    border-color: var(--gold);
+    background: rgba(232,184,75,0.08);
     color: var(--text);
   }
 
-  h1 span {
-    display: inline-block;
-    position: relative;
-  }
-
-  h1 span::after {
-    content: '';
-    position: absolute;
-    bottom: 2px;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: linear-gradient(90deg, var(--cirrus), var(--breville), var(--tefal), var(--banxye));
-    border-radius: 2px;
-  }
-
-  .subtitle {
-    margin-top: 16px;
-    font-size: 12px;
-    color: var(--muted);
-    letter-spacing: 0.05em;
-  }
-
-  /* Legend */
-  .legend {
-    display: flex;
-    justify-content: center;
-    gap: 24px;
-    flex-wrap: wrap;
-    margin-bottom: 40px;
-    animation: fadeUp 0.6s 0.1s ease both;
-  }
-
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.05em;
-  }
-
-  .legend-dot {
-    width: 8px;
-    height: 8px;
+  .filter-pill-dot {
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-  }
-
-  /* Metric sections */
-  .metric-section {
-    margin-bottom: 40px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 32px;
-    animation: fadeUp 0.6s ease both;
-  }
-
-  .metric-section:nth-child(1) { animation-delay: 0.15s; }
-  .metric-section:nth-child(2) { animation-delay: 0.25s; }
-  .metric-section:nth-child(3) { animation-delay: 0.35s; }
-
-  .metric-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 28px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .metric-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-
-  .metric-unit {
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  /* Bar rows */
-  .bar-row {
-    display: grid;
-    grid-template-columns: 120px 1fr 64px;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 18px;
-  }
-
-  .bar-row:last-child { margin-bottom: 0; }
-
-  .bar-label {
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .bar-track {
-    height: 10px;
-    background: var(--surface2);
-    border-radius: 99px;
-    overflow: visible;
-    position: relative;
-  }
-
-  .bar-fill {
-    height: 100%;
-    border-radius: 99px;
-    width: 0%;
-    transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
-    position: relative;
-  }
-
-  .bar-fill::after {
-    content: '';
-    position: absolute;
-    right: -1px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: inherit;
-    box-shadow: 0 0 8px currentColor;
-    opacity: 0.8;
-  }
-
-  .bar-value {
-    font-family: 'Syne', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    text-align: right;
-    letter-spacing: -0.02em;
-  }
-
-  /* Ticks */
-  .tick-row {
-    display: grid;
-    grid-template-columns: 120px 1fr 64px;
-    gap: 16px;
-    margin-top: 10px;
-  }
-
-  .tick-track {
-    display: flex;
-    justify-content: space-between;
-    padding: 0 2px;
-  }
-
-  .tick {
-    font-size: 9px;
-    color: var(--border);
-    letter-spacing: 0.03em;
-  }
-
-  /* Divider lines on track */
-  .bar-track-wrap {
-    position: relative;
-  }
-
-  .grid-lines {
-    position: absolute;
-    inset: -4px 0;
-    display: flex;
-    justify-content: space-between;
-    pointer-events: none;
-  }
-
-  .grid-line {
-    width: 1px;
     background: var(--border);
-    opacity: 0.5;
+    flex-shrink: 0;
+    transition: background 0.15s;
   }
 
-  /* Footer */
-  footer {
-    text-align: center;
-    margin-top: 48px;
-    font-size: 10px;
-    color: var(--border);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    animation: fadeUp 0.6s 0.5s ease both;
+  .filter-pill.active .filter-pill-dot {
+    background: var(--gold);
   }
 
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .max-w {
-    max-width: 720px;
+  /* Divider */
+  .scale-divider {
+    height: 1px;
+    background: var(--border);
+    max-width: 960px;
     margin: 0 auto;
   }
 
-  /* Hover interaction */
-  .bar-row:hover .bar-label { color: var(--text); transition: color 0.2s; }
-  .bar-row:hover .bar-value { opacity: 1; transition: opacity 0.2s; }
+  /* Empty / loading state */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 56px;
+    font-size: 10px;
+    color: var(--border);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
 </style>
 </head>
 <body>
-<div class="max-w">
 
-  <header class="page-header">
-    <p class="eyebrow">Performance Analysis</p>
-    <h1><span>Steamer</span> Comparison</h1>
-    <p class="subtitle">Tank Capacity · Steam Rate · Run Time</p>
-  </header>
-
-  <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:var(--cirrus)"></div>Steamery Cirrus Lite</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--breville)"></div>Breville</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--tefal)"></div>Tefal</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--banxye)"></div>Banxye</div>
+<div style="max-width:960px;margin:0 auto 0;">
+  <!-- Upload -->
+  <div class="upload-zone" id="upload-zone">
+    <div class="upload-left">
+      <div class="upload-icon">📊</div>
+      <div class="upload-text">
+        <strong id="upload-title">Upload your steamer data</strong>
+        <span id="upload-sub">Drop your Excel file here to update the scales</span>
+      </div>
+    </div>
+    <button class="upload-btn" onclick="document.getElementById('file-input').click()">Choose File</button>
   </div>
+  <input type="file" id="file-input" accept=".xlsx,.xls">
 
-  <!-- Tank Capacity -->
-  <section class="metric-section">
-    <div class="metric-header">
-      <h2 class="metric-title">Tank Capacity</h2>
-      <span class="metric-unit">grams (g)</span>
-    </div>
-
-    <div class="bar-row">
-      <span class="bar-label">Steamery Cirrus Lite</span>
-      <div class="bar-track-wrap">
-        <div class="bar-track"><div class="bar-fill" data-pct="31.7" style="background:var(--cirrus)"></div></div>
-      </div>
-      <span class="bar-value" style="color:var(--cirrus)">62g</span>
-    </div>
-
-    <div class="bar-row">
-      <span class="bar-label">Breville</span>
-      <div class="bar-track-wrap">
-        <div class="bar-track"><div class="bar-fill" data-pct="100" style="background:var(--breville)"></div></div>
-      </div>
-      <span class="bar-value" style="color:var(--breville)">196g</span>
-    </div>
-
-    <div class="bar-row">
-      <span class="bar-label">Tefal</span>
-      <div class="bar-track-wrap">
-        <div class="bar-track"><div class="bar-fill" data-pct="33.6" style="background:var(--tefal)"></div></div>
-      </div>
-      <span class="bar-value" style="color:var(--tefal)">66g</span>
-    </div>
-
-    <div class="bar-row">
-      <span class="bar-label">Banxye</span>
-      <div class="bar-track-wrap">
-        <div class="bar-track"><div class="bar-fill" data-pct="57.2" style="background:var(--banxye)"></div></div>
-      </div>
-      <span class="bar-value" style="color:var(--banxye)">112g</span>
-    </div>
-
-    <div class="tick-row">
-      <div></div>
-      <div class="tick-track">
-        <span class="tick">0g</span>
-        <span class="tick">50g</span>
-        <span class="tick">100g</span>
-        <span class="tick">150g</span>
-        <span class="tick">196g</span>
-      </div>
-      <div></div>
-    </div>
-  </section>
-
-  <!-- Steam Rate -->
-  <section class="metric-section">
-    <div class="metric-header">
-      <h2 class="metric-title">Steam Rate</h2>
-      <span class="metric-unit">grams per minute (g/min)</span>
-    </div>
-
-    <div class="bar-row">
-      <span class="bar-label">Steamery Cirrus Lite</span>
-      <div class="bar-track-wrap">
-        <div class="bar-track"><div class="bar-fill" data-pct="48.5" style="background:var(--cirrus)"></div></div>
-      </div>
-      <span class="bar-value" style="color:var(--cirrus)">11.4</span>
-    </div>
-
-    <div class="bar-row">
-      <span class="bar-label">Breville</span>
-      <div class="bar-track-wrap">
-        <div class="bar-track"><div class="bar-fill" data-pct="100" style="background:var(--breville)"></div></div>
-      </div>
-      <span class="bar-value" style="color:var(--breville)">23.5</span>
-    </div>
-
-    <div class="bar-row">
-      <span class="bar-label">Tefal</span>
-      <div class="bar-track-wrap">
-        <div class="bar-track"><div class="bar-fill" data-pct="97.1" style="background:var(--tefal)"></div></div>
-      </div>
-      <span class="bar-value" style="color:var(--tefal)">22.8</span>
-    </div>
-
-    <div class="bar-row">
-      <span class="bar-label">Banxye</span>
-      <div class="bar-track-wrap">
-        <div class="bar-track"><div class="bar-fill" data-pct="88.9" style="background:var(--banxye)"></div></div>
-      </div>
-      <span class="bar-value" style="color:var(--banxye)">20.9</span>
-    </div>
-
-    <div class="tick-row">
-      <div></div>
-      <div class="tick-track">
-        <span class="tick">0</span>
-        <span class="tick">6</span>
-        <span class="tick">12</span>
-        <span class="tick">18</span>
-        <span class="tick">23.5</span>
-      </div>
-      <div></div>
-    </div>
-  </section>
-
-  <!-- Run Time -->
-  <section class="metric-section">
-    <div class="metric-header">
-      <h2 class="metric-title">Run Time</h2>
-      <span class="metric-unit">minutes (min)</span>
-    </div>
-
-    <div class="bar-row">
-      <span class="bar-label">Steamery Cirrus Lite</span>
-      <div class="bar-track-wrap">
-        <div class="bar-track"><div class="bar-fill" data-pct="65.0" style="background:var(--cirrus)"></div></div>
-      </div>
-      <span class="bar-value" style="color:var(--cirrus)">14.1m</span>
-    </div>
-
-    <div class="bar-row">
-      <span class="bar-label">Breville</span>
-      <div class="bar-track-wrap">
-        <div class="bar-track"><div class="bar-fill" data-pct="100" style="background:var(--breville)"></div></div>
-      </div>
-      <span class="bar-value" style="color:var(--breville)">21.7m</span>
-    </div>
-
-    <div class="bar-row">
-      <span class="bar-label">Tefal</span>
-      <div class="bar-track-wrap">
-        <div class="bar-track"><div class="bar-fill" data-pct="39.2" style="background:var(--tefal)"></div></div>
-      </div>
-      <span class="bar-value" style="color:var(--tefal)">8.5m</span>
-    </div>
-
-    <div class="bar-row">
-      <span class="bar-label">Banxye</span>
-      <div class="bar-track-wrap">
-        <div class="bar-track"><div class="bar-fill" data-pct="65.4" style="background:var(--banxye)"></div></div>
-      </div>
-      <span class="bar-value" style="color:var(--banxye)">14.2m</span>
-    </div>
-
-    <div class="tick-row">
-      <div></div>
-      <div class="tick-track">
-        <span class="tick">0m</span>
-        <span class="tick">5m</span>
-        <span class="tick">10m</span>
-        <span class="tick">15m</span>
-        <span class="tick">21.7m</span>
-      </div>
-      <div></div>
-    </div>
-  </section>
-
-  <footer>Measured data · May 2026</footer>
-
+  <!-- Header -->
+  <div class="page-header">
+    <p class="eyebrow">Performance Analysis</p>
+    <h1>Steamer <em>Scales</em></h1>
+    <p class="steamer-count" id="steamer-count">Showing 4 steamers</p>
+  </div>
+  <!-- Steamer filter -->
+  <div class="steamer-filter" id="steamer-filter">
+    <div class="filter-heading">Steamers</div>
+    <div class="filter-pills" id="filter-pills"><!-- rendered by JS --></div>
+  </div>
 </div>
 
-<script>
-  // Animate bars on load
-  const fills = document.querySelectorAll('.bar-fill');
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const el = entry.target;
-        const pct = el.dataset.pct;
-        setTimeout(() => { el.style.width = pct + '%'; }, 100);
-        observer.unobserve(el);
-      }
-    });
-  }, { threshold: 0.1 });
+<!-- Scales -->
+<div class="scales-wrap" id="scales-wrap">
+  <!-- Rendered by JS -->
+</div>
 
-  fills.forEach(f => observer.observe(f));
+<footer id="footer">Data loaded from Excel · May 2026</footer>
+
+<script>
+// ── Default data (measured + advertised) ─────────────────────────────────
+const DEFAULT_DATA = [
+  { name: 'Steamery Cirrus Lite',
+    steamRateMeasured: 11.4,  steamRateAdvertised: 16.0,
+    tankCapacityMeasured: 62.2,  tankCapacityAdvertised: 70.0,
+    runTimeMeasured: 14.1,  runTimeAdvertised: null },
+  { name: 'Breville',
+    steamRateMeasured: 23.5,  steamRateAdvertised: 20.0,
+    tankCapacityMeasured: 196.2, tankCapacityAdvertised: 200.0,
+    runTimeMeasured: 21.7,  runTimeAdvertised: null },
+  { name: 'Tefal',
+    steamRateMeasured: 22.83, steamRateAdvertised: 20.0,
+    tankCapacityMeasured: 66.0,  tankCapacityAdvertised: 70.0,
+    runTimeMeasured: 8.5,   runTimeAdvertised: null },
+  { name: 'Banxye',
+    steamRateMeasured: 20.92, steamRateAdvertised: 22.0,
+    tankCapacityMeasured: 112.2, tankCapacityAdvertised: 120.0,
+    runTimeMeasured: 14.2,  runTimeAdvertised: null },
+];
+
+// ── Excel row indices (1-based, as in your spreadsheet) ───────────────────
+const ROW_IDX = {
+  tankCapacityAdvertised: 16,
+  tankCapacityMeasured:   17,
+  steamRateAdvertised:    19,
+  steamRateMeasured:      20,
+  runTimeAdvertised:      25,
+  runTimeMeasured:        26,
+};
+
+// ── Metric config ─────────────────────────────────────────────────────────
+const METRICS = [
+  { id: 'tankCapacity', label: 'Tank Capacity', unit: 'grams',   decimals: 0,
+    measured: 'tankCapacityMeasured', advertised: 'tankCapacityAdvertised' },
+  { id: 'steamRate',    label: 'Steam Rate',    unit: 'g/min',   decimals: 1,
+    measured: 'steamRateMeasured',    advertised: 'steamRateAdvertised'    },
+  { id: 'runTime',      label: 'Run Time',      unit: 'minutes', decimals: 1,
+    measured: 'runTimeMeasured',      advertised: 'runTimeAdvertised'      },
+];
+
+// ── Toggle state: 'measured' or 'advertised' per metric ───────────────────
+const toggleState = { tankCapacity: 'measured', steamRate: 'measured', runTime: 'measured' };
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function timeToMinutes(val) {
+  if (val instanceof Date) return val.getHours() * 60 + val.getMinutes() + val.getSeconds() / 60;
+  if (typeof val === 'number') return val < 1 ? val * 24 * 60 : val;
+  if (typeof val === 'string' && val.includes(':')) {
+    const parts = val.split(':').map(Number);
+    return parts[0] * 60 + (parts[1] || 0) + (parts[2] || 0) / 60;
+  }
+  return parseFloat(val) || null;
+}
+
+function parseExcel(arrayBuffer) {
+  const wb = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+
+  // Find header row (first row where col 0 is empty and col 1+ are strings)
+  let headerRowIdx = -1;
+  let steamerNames = [];
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i][0] === null && rows[i][1] && typeof rows[i][1] === 'string') {
+      headerRowIdx = i;
+      steamerNames = rows[i].slice(1).filter(v => v);
+      break;
+    }
+  }
+  if (headerRowIdx === -1 || steamerNames.length === 0) return null;
+
+  const numCols = steamerNames.length;
+
+  function getRow(oneBasedIdx) {
+    return rows[oneBasedIdx - 1] || [];
+  }
+
+  function parseRow(oneBasedIdx, isTime) {
+    const r = getRow(oneBasedIdx);
+    return r.slice(1, numCols + 1).map(v => {
+      if (v === null || v === '') return null;
+      return isTime ? timeToMinutes(v) : parseFloat(v) || null;
+    });
+  }
+
+  const tc_adv = parseRow(ROW_IDX.tankCapacityAdvertised);
+  const tc_mea = parseRow(ROW_IDX.tankCapacityMeasured);
+  const sr_adv = parseRow(ROW_IDX.steamRateAdvertised);
+  const sr_mea = parseRow(ROW_IDX.steamRateMeasured);
+  const rt_adv = parseRow(ROW_IDX.runTimeAdvertised, true);
+  const rt_mea = parseRow(ROW_IDX.runTimeMeasured,   true);
+
+  return steamerNames.map((name, i) => ({
+    name,
+    tankCapacityAdvertised: tc_adv[i], tankCapacityMeasured: tc_mea[i],
+    steamRateAdvertised:    sr_adv[i], steamRateMeasured:    sr_mea[i],
+    runTimeAdvertised:      rt_adv[i], runTimeMeasured:      rt_mea[i],
+  }));
+}
+
+// ── Scale rendering ───────────────────────────────────────────────────────
+function niceRange(min, max) {
+  const range = max - min || 1;
+  const lo = Math.max(0, Math.floor(min - range * 0.15));
+  const hi = Math.ceil(max + range * 0.15);
+  return [lo, hi];
+}
+
+function niceTickStep(range) {
+  const rough = range / 6;
+  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  const steps = [1,2,5,10].map(s => s * mag);
+  return steps.find(s => range / s <= 8) || steps[steps.length - 1];
+}
+
+// Fixed ranges computed once from ALL data (both measured + advertised)
+// Stored globally so they NEVER change when toggling or filtering
+let FIXED_RANGES = {};
+
+function computeFixedRanges() {
+  METRICS.forEach(m => {
+    const vals = currentData.flatMap(s => [s[m.measured], s[m.advertised]])
+      .filter(v => v != null && !isNaN(v));
+    if (vals.length === 0) { FIXED_RANGES[m.id] = [0, 1]; return; }
+    FIXED_RANGES[m.id] = niceRange(Math.min(...vals), Math.max(...vals));
+  });
+}
+
+function getFixedRange(metric) {
+  return FIXED_RANGES[metric.id] || [0, 1];
+}
+function buildScaleHTML(metric, visibleSteamers, mode, fixedMin, fixedMax) {
+  const dataKey = mode === 'advertised' ? metric.advertised : metric.measured;
+  const vals = visibleSteamers.map(s => s[dataKey]).filter(v => v != null && !isNaN(v));
+  if (vals.length === 0) return '<div class="empty-state">No data available</div>';
+
+  const range = fixedMax - fixedMin || 1;
+  const step = niceTickStep(fixedMax - fixedMin);
+
+  function pct(v) { return ((v - fixedMin) / range * 96).toFixed(2); }
+
+  let ticks = '';
+  const firstTick = Math.ceil(fixedMin / step) * step;
+  for (let t = firstTick; t <= fixedMax; t = Math.round((t + step) * 1000) / 1000) {
+    ticks += `<div class="tick-mark" style="left:${pct(t)}%">
+      <div class="tick-line"></div>
+      <div class="tick-val">${Number.isInteger(step) ? Math.round(t) : t.toFixed(1)}</div>
+    </div>`;
+  }
+
+  const sorted = visibleSteamers
+    .filter(s => s[dataKey] != null && !isNaN(s[dataKey]))
+    .sort((a, b) => a[dataKey] - b[dataKey]);
+
+  const ROW_H = 72, PCT_THRESH = 7;
+  const rowNums = new Array(sorted.length).fill(0);
+  for (let i = 1; i < sorted.length; i++) {
+    if (parseFloat(pct(sorted[i][dataKey])) - parseFloat(pct(sorted[i-1][dataKey])) < PCT_THRESH) {
+      rowNums[i] = rowNums[i-1] + 1;
+    }
+  }
+  const labelsAreaH = (Math.max(...rowNums) + 1) * ROW_H + 16;
+
+  let markers = '';
+  sorted.forEach((s, i) => {
+    const p = pct(s[dataKey]);
+    const rowTop = rowNums[i] * ROW_H;
+    const lineH = rowTop + 8;
+    const val = s[dataKey];
+    const displayVal = metric.decimals === 0 ? Math.round(val) : val.toFixed(metric.decimals);
+    markers += `
+      <div class="steamer-marker" style="left:${p}%;">
+        <div class="marker-dot"></div>
+        <div class="marker-line" style="top:-3px;height:${lineH}px;"></div>
+        <div style="position:absolute;top:${rowTop+8}px;display:flex;flex-direction:column;align-items:center;width:80px;left:50%;transform:translateX(-50%);">
+          <div class="marker-label">${s.name}</div>
+          <div class="marker-value">${displayVal}</div>
+        </div>
+      </div>`;
+  });
+
+  return `
+    <div class="scale-track">${ticks}</div>
+    <div class="labels-area" style="height:${labelsAreaH}px;position:relative;">${markers}</div>`;
+}
+
+// ── Filter state ──────────────────────────────────────────────────────────
+let activeFilters = new Set(); // steamer names that are ON
+
+function getVisibleSteamers() {
+  return currentData.filter(s => activeFilters.has(s.name));
+}
+
+function renderFilterPills() {
+  const container = document.getElementById('filter-pills');
+  container.innerHTML = currentData.map(s => {
+    const on = activeFilters.has(s.name);
+    return `<div class="filter-pill${on ? ' active' : ''}" onclick="toggleFilter('${s.name.replace(/'/g,"\\'")}')">
+      <div class="filter-pill-dot"></div>
+      ${s.name}
+    </div>`;
+  }).join('');
+}
+
+function toggleFilter(name) {
+  if (activeFilters.has(name)) {
+    if (activeFilters.size === 1) return; // keep at least one
+    activeFilters.delete(name);
+  } else {
+    activeFilters.add(name);
+  }
+  renderFilterPills();
+  renderAllScales(getVisibleSteamers());
+}
+
+function renderAllScales(visibleSteamers) {
+  const wrap = document.getElementById('scales-wrap');
+  const total = visibleSteamers.length;
+  document.getElementById('steamer-count').textContent =
+    `Showing ${total} of ${currentData.length} steamer${currentData.length !== 1 ? 's' : ''}`;
+
+  let html = '';
+  METRICS.forEach((m, i) => {
+    const mode = toggleState[m.id];
+    const isAdv = mode === 'advertised';
+    const [fixedMin, fixedMax] = getFixedRange(m);
+    html += `
+      <div class="scale-section${isAdv ? ' advertised' : ''}" id="section-${m.id}">
+        <div class="scale-header">
+          <div class="scale-header-left">
+            <span class="scale-title">${m.label}</span>
+            <span class="scale-unit">${m.unit}</span>
+          </div>
+          <div class="toggle-wrap">
+            <span class="toggle-label${!isAdv ? ' active' : ''}">Measured</span>
+            <label class="toggle">
+              <input type="checkbox" ${isAdv ? 'checked' : ''} onchange="onToggle('${m.id}')">
+              <div class="toggle-track"></div>
+            </label>
+            <span class="toggle-label${isAdv ? ' active' : ''}">Advertised</span>
+          </div>
+        </div>
+        <div class="scale-container" id="container-${m.id}" data-min="${fixedMin}" data-max="${fixedMax}">
+          ${buildScaleHTML(m, visibleSteamers, mode, fixedMin, fixedMax)}
+        </div>
+      </div>`;
+    if (i < METRICS.length - 1) html += '<div class="scale-divider"></div>';
+  });
+
+  wrap.innerHTML = html;
+}
+
+// ── Toggle handler ────────────────────────────────────────────────────────
+function onToggle(metricId) {
+  toggleState[metricId] = toggleState[metricId] === 'measured' ? 'advertised' : 'measured';
+  const metric = METRICS.find(m => m.id === metricId);
+  const mode = toggleState[metricId];
+  const isAdv = mode === 'advertised';
+
+  const section = document.getElementById(`section-${metricId}`);
+  section.classList.toggle('advertised', isAdv);
+
+  const labels = section.querySelectorAll('.toggle-label');
+  labels[0].classList.toggle('active', !isAdv);
+  labels[1].classList.toggle('active', isAdv);
+
+  const container = document.getElementById(`container-${metricId}`);
+  const [fixedMin, fixedMax] = getFixedRange(metric);
+  container.innerHTML = buildScaleHTML(metric, getVisibleSteamers(), mode, fixedMin, fixedMax);
+}
+
+// ── File handling ─────────────────────────────────────────────────────────
+let currentData = DEFAULT_DATA;
+
+function initData(data) {
+  currentData = data;
+  computeFixedRanges(); // compute once, never changes after this
+  activeFilters = new Set(data.map(s => s.name));
+  renderFilterPills();
+  renderAllScales(getVisibleSteamers());
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = parseExcel(e.target.result);
+      if (!data || data.length === 0) {
+        alert('Could not read steamer data. Please check your spreadsheet format.');
+        return;
+      }
+      document.getElementById('upload-title').textContent = file.name;
+      document.getElementById('upload-sub').textContent = `${data.length} steamers loaded · drop a new file to refresh`;
+      document.getElementById('footer').textContent = `Data from ${file.name} · ${new Date().toLocaleDateString('en-GB', {month:'long', year:'numeric'})}`;
+      initData(data);
+    } catch(err) {
+      console.error(err);
+      alert('Error reading file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+document.getElementById('file-input').addEventListener('change', e => handleFile(e.target.files[0]));
+
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  handleFile(e.dataTransfer.files[0]);
+});
+zone.addEventListener('click', e => {
+  if (e.target.tagName !== 'BUTTON') document.getElementById('file-input').click();
+});
+
+// Load default data on start
+initData(DEFAULT_DATA);
 </script>
 </body>
 </html>
