@@ -6,6 +6,8 @@
 <title>Steamer Comparison Scales</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -260,6 +262,26 @@
     position: relative;
   }
 
+  .export-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .export-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .export-btn svg { flex-shrink: 0; }
+
   /* Toggle switch */
   .scale-header {
     display: flex;
@@ -391,6 +413,100 @@
     background: var(--gold);
   }
 
+  /* Target input panel */
+  .target-panel {
+    max-width: 960px;
+    margin: 0 auto 40px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+
+  .target-heading {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .target-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    align-items: end;
+  }
+
+  .target-field label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .target-field input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .target-field input:focus { border-color: #E05C5C; }
+
+  .target-field input::placeholder { color: var(--muted); }
+
+  .target-calc {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--muted);
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+  }
+
+  .target-calc.has-value { color: #E05C5C; font-weight: 500; }
+
+  .target-clear {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+
+  .target-clear:hover { border-color: #E05C5C; color: #E05C5C; }
+
+  /* Target marker on scale */
+  .target-marker .marker-dot {
+    background: #E05C5C !important;
+    box-shadow: 0 0 8px rgba(224,92,92,0.5) !important;
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .target-marker .marker-line { background: #E05C5C !important; opacity: 0.5 !important; }
+  .target-marker .marker-label { color: #E05C5C !important; font-weight: 500; }
+  .target-marker .marker-value { color: #E05C5C !important; }
+
   /* Divider */
   .scale-divider {
     height: 1px;
@@ -450,6 +566,28 @@
     <div class="filter-heading">Steamers</div>
     <div class="filter-pills" id="filter-pills"><!-- rendered by JS --></div>
   </div>
+
+  <!-- Target inputs -->
+  <div class="target-panel">
+    <div class="target-heading">Target Steamer</div>
+    <div class="target-fields">
+      <div class="target-field">
+        <label>Steam Rate (g/min)</label>
+        <input type="number" id="target-sr" placeholder="e.g. 18" min="0" step="0.1" oninput="updateTarget()">
+      </div>
+      <div class="target-field">
+        <label>Tank Capacity (g)</label>
+        <input type="number" id="target-tc" placeholder="e.g. 150" min="0" step="1" oninput="updateTarget()">
+      </div>
+      <div class="target-field">
+        <label>Calculated Run Time</label>
+        <div class="target-calc" id="target-rt-display">— enter values above</div>
+      </div>
+      <div class="target-field" style="display:flex;align-items:flex-end;">
+        <button class="target-clear" onclick="clearTarget()">Clear</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Scales -->
@@ -502,6 +640,9 @@ const METRICS = [
 
 // ── Toggle state: 'measured' or 'advertised' per metric ───────────────────
 const toggleState = { tankCapacity: 'measured', steamRate: 'measured', runTime: 'measured' };
+
+// ── Target state ──────────────────────────────────────────────────────────
+const target = { steamRate: null, tankCapacity: null, runTime: null };
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function timeToMinutes(val) {
@@ -580,8 +721,10 @@ function niceTickStep(range) {
 let FIXED_RANGES = {};
 
 function computeFixedRanges() {
+  const targetMap = { tankCapacity: target.tankCapacity, steamRate: target.steamRate, runTime: target.runTime };
   METRICS.forEach(m => {
     const vals = currentData.flatMap(s => [s[m.measured], s[m.advertised]])
+      .concat([targetMap[m.id]])
       .filter(v => v != null && !isNaN(v));
     if (vals.length === 0) { FIXED_RANGES[m.id] = [0, 1]; return; }
     FIXED_RANGES[m.id] = niceRange(Math.min(...vals), Math.max(...vals));
@@ -594,7 +737,6 @@ function getFixedRange(metric) {
 function buildScaleHTML(metric, visibleSteamers, mode, fixedMin, fixedMax) {
   const dataKey = mode === 'advertised' ? metric.advertised : metric.measured;
   const vals = visibleSteamers.map(s => s[dataKey]).filter(v => v != null && !isNaN(v));
-  if (vals.length === 0) return '<div class="empty-state">No data available</div>';
 
   const range = fixedMax - fixedMin || 1;
   const step = niceTickStep(fixedMax - fixedMin);
@@ -610,32 +752,43 @@ function buildScaleHTML(metric, visibleSteamers, mode, fixedMin, fixedMax) {
     </div>`;
   }
 
-  const sorted = visibleSteamers
+  // Build list of all markers: steamers + optional target
+  const targetMap = { tankCapacity: target.tankCapacity, steamRate: target.steamRate, runTime: target.runTime };
+  const targetVal = targetMap[metric.id];
+
+  const steamerItems = visibleSteamers
     .filter(s => s[dataKey] != null && !isNaN(s[dataKey]))
-    .sort((a, b) => a[dataKey] - b[dataKey]);
+    .map(s => ({ name: s.name, val: s[dataKey], isTarget: false }));
+
+  const targetItem = (targetVal != null && !isNaN(targetVal))
+    ? [{ name: 'Target', val: targetVal, isTarget: true }] : [];
+
+  const sorted = [...steamerItems, ...targetItem].sort((a, b) => a.val - b.val);
+
+  if (sorted.length === 0) return '<div class="empty-state">No data available</div>';
 
   const ROW_H = 72, PCT_THRESH = 7;
   const rowNums = new Array(sorted.length).fill(0);
   for (let i = 1; i < sorted.length; i++) {
-    if (parseFloat(pct(sorted[i][dataKey])) - parseFloat(pct(sorted[i-1][dataKey])) < PCT_THRESH) {
+    if (parseFloat(pct(sorted[i].val)) - parseFloat(pct(sorted[i-1].val)) < PCT_THRESH) {
       rowNums[i] = rowNums[i-1] + 1;
     }
   }
   const labelsAreaH = (Math.max(...rowNums) + 1) * ROW_H + 16;
 
   let markers = '';
-  sorted.forEach((s, i) => {
-    const p = pct(s[dataKey]);
+  sorted.forEach((item, i) => {
+    const p = pct(item.val);
     const rowTop = rowNums[i] * ROW_H;
     const lineH = rowTop + 8;
-    const val = s[dataKey];
-    const displayVal = metric.decimals === 0 ? Math.round(val) : val.toFixed(metric.decimals);
+    const displayVal = metric.decimals === 0 ? Math.round(item.val) : item.val.toFixed(metric.decimals);
+    const cls = item.isTarget ? ' target-marker' : '';
     markers += `
-      <div class="steamer-marker" style="left:${p}%;">
+      <div class="steamer-marker${cls}" style="left:${p}%;">
         <div class="marker-dot"></div>
         <div class="marker-line" style="top:-3px;height:${lineH}px;"></div>
         <div style="position:absolute;top:${rowTop+8}px;display:flex;flex-direction:column;align-items:center;width:80px;left:50%;transform:translateX(-50%);">
-          <div class="marker-label">${s.name}</div>
+          <div class="marker-label">${item.name}</div>
           <div class="marker-value">${displayVal}</div>
         </div>
       </div>`;
@@ -701,6 +854,10 @@ function renderAllScales(visibleSteamers) {
             </label>
             <span class="toggle-label${isAdv ? ' active' : ''}">Advertised</span>
           </div>
+          <button class="export-btn" onclick="exportPDF('${m.id}', '${m.label}')">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            PDF
+          </button>
         </div>
         <div class="scale-container" id="container-${m.id}" data-min="${fixedMin}" data-max="${fixedMax}">
           ${buildScaleHTML(m, visibleSteamers, mode, fixedMin, fixedMax)}
@@ -729,6 +886,85 @@ function onToggle(metricId) {
   const container = document.getElementById(`container-${metricId}`);
   const [fixedMin, fixedMax] = getFixedRange(metric);
   container.innerHTML = buildScaleHTML(metric, getVisibleSteamers(), mode, fixedMin, fixedMax);
+}
+
+// ── Target input ──────────────────────────────────────────────────────────
+function updateTarget() {
+  const sr = parseFloat(document.getElementById('target-sr').value);
+  const tc = parseFloat(document.getElementById('target-tc').value);
+  const rtDisplay = document.getElementById('target-rt-display');
+
+  target.steamRate    = isNaN(sr) ? null : sr;
+  target.tankCapacity = isNaN(tc) ? null : tc;
+
+  // Run time = tank capacity / steam rate (minutes)
+  if (target.steamRate > 0 && target.tankCapacity > 0) {
+    target.runTime = target.tankCapacity / target.steamRate;
+    rtDisplay.textContent = target.runTime.toFixed(1) + ' min';
+    rtDisplay.classList.add('has-value');
+  } else {
+    target.runTime = null;
+    rtDisplay.textContent = '— enter values above';
+    rtDisplay.classList.remove('has-value');
+  }
+
+  // Re-render scales only if data is loaded
+  if (currentData.length > 0) {
+    computeFixedRanges();
+    renderAllScales(getVisibleSteamers());
+  }
+}
+
+function clearTarget() {
+  document.getElementById('target-sr').value = '';
+  document.getElementById('target-tc').value = '';
+  target.steamRate = null;
+  target.tankCapacity = null;
+  target.runTime = null;
+  document.getElementById('target-rt-display').textContent = '— enter values above';
+  document.getElementById('target-rt-display').classList.remove('has-value');
+  if (currentData.length > 0) {
+    computeFixedRanges();
+    renderAllScales(getVisibleSteamers());
+  }
+}
+
+// ── PDF Export ────────────────────────────────────────────────────────────
+async function exportPDF(metricId, metricLabel) {
+  const section = document.getElementById(`section-${metricId}`);
+  const btn = section.querySelector('.export-btn');
+  const origText = btn.innerHTML;
+  btn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Exporting...';
+  btn.disabled = true;
+
+  try {
+    const canvas = await html2canvas(section, {
+      backgroundColor: '#111210',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+
+    const { jsPDF } = window.jspdf;
+    const imgW = 297; // A4 landscape width in mm
+    const imgH = (canvas.height / canvas.width) * imgW;
+    const pdf = new jsPDF({ orientation: imgH > imgW ? 'portrait' : 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const scale = Math.min(pageW / imgW, pageH / imgH);
+    const x = (pageW - imgW * scale) / 2;
+    const y = (pageH - imgH * scale) / 2;
+
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, imgW * scale, imgH * scale);
+    const mode = toggleState[metricId] === 'advertised' ? 'Advertised' : 'Measured';
+    pdf.save(`${metricLabel.replace(/ /g, '_')}_${mode}.pdf`);
+  } catch(err) {
+    console.error(err);
+    alert('Export failed: ' + err.message);
+  } finally {
+    btn.innerHTML = origText;
+    btn.disabled = false;
+  }
 }
 
 // ── File handling ─────────────────────────────────────────────────────────
@@ -778,8 +1014,12 @@ zone.addEventListener('click', e => {
   if (e.target.tagName !== 'BUTTON') document.getElementById('file-input').click();
 });
 
-// Load default data on start
-initData(DEFAULT_DATA);
+// Show blank state on start — waiting for Excel upload
+document.getElementById('steamer-count').textContent = 'Upload a spreadsheet to get started';
+document.getElementById('scales-wrap').innerHTML = `
+  <div style="text-align:center;padding:80px 20px;color:var(--muted);font-size:12px;letter-spacing:0.08em;text-transform:uppercase;">
+    No data loaded · upload your Excel file above
+  </div>`;
 </script>
 </body>
 </html>
