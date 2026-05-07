@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -856,7 +855,7 @@ function renderAllScales(visibleSteamers) {
           </div>
           <button class="export-btn" onclick="exportPDF('${m.id}', '${m.label}')">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            PDF
+            PNG
           </button>
         </div>
         <div class="scale-container" id="container-${m.id}" data-min="${fixedMin}" data-max="${fixedMax}">
@@ -929,40 +928,32 @@ function clearTarget() {
   }
 }
 
-// ── PDF Export ────────────────────────────────────────────────────────────
+// ── PNG Export ────────────────────────────────────────────────────────────
 async function exportPDF(metricId, metricLabel) {
   const section = document.getElementById(`section-${metricId}`);
   const btn = section.querySelector('.export-btn');
-  const origText = btn.innerHTML;
+  const origHTML = btn.innerHTML;
   btn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Exporting...';
   btn.disabled = true;
 
   try {
     const canvas = await html2canvas(section, {
       backgroundColor: '#111210',
-      scale: 2,
+      scale: 3,
       useCORS: true,
       logging: false,
     });
 
-    const { jsPDF } = window.jspdf;
-    const imgW = 297; // A4 landscape width in mm
-    const imgH = (canvas.height / canvas.width) * imgW;
-    const pdf = new jsPDF({ orientation: imgH > imgW ? 'portrait' : 'landscape', unit: 'mm', format: 'a4' });
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-    const scale = Math.min(pageW / imgW, pageH / imgH);
-    const x = (pageW - imgW * scale) / 2;
-    const y = (pageH - imgH * scale) / 2;
-
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, imgW * scale, imgH * scale);
+    const link = document.createElement('a');
     const mode = toggleState[metricId] === 'advertised' ? 'Advertised' : 'Measured';
-    pdf.save(`${metricLabel.replace(/ /g, '_')}_${mode}.pdf`);
+    link.download = `${metricLabel.replace(/ /g, '_')}_${mode}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
   } catch(err) {
     console.error(err);
     alert('Export failed: ' + err.message);
   } finally {
-    btn.innerHTML = origText;
+    btn.innerHTML = origHTML;
     btn.disabled = false;
   }
 }
